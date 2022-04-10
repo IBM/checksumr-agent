@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 
 public class HashComputer {
@@ -15,28 +13,20 @@ public class HashComputer {
 		this.algorithms = algorithms;
 	}
 
-	public Map<String, Map<String, String>> calculate(Path fileToCheck) {
-		byte[] digest;
-		String scannedPath = fileToCheck.toAbsolutePath().toString();
-		Map<String, String> checksumMap = new HashMap<String, String>(this.algorithms.size());
-		Map<String, Map<String, String>> result = new HashMap<String, Map<String, String>>(1);
+	public FileHashCalculation calculate(Path fileToCheck) {
+		byte[] fileContent;
+		String algorithmName, checksum;
+		FileHashCalculation result = new FileHashCalculation(fileToCheck);
 
 		try {
-			byte[] fileContent = Files.readAllBytes(fileToCheck);
+			fileContent = Files.readAllBytes(fileToCheck);
 
 			for (MessageDigest algorithm : this.algorithms) {
-				algorithm.update(fileContent);
-				digest = algorithm.digest();
+				algorithmName = algorithm.getAlgorithm();
+				checksum = this.generateChecksum(algorithm, fileContent);
 
-				StringBuilder sb = new StringBuilder();
-				for (int i = 0; i < digest.length; i++) {
-					sb.append(Integer.toString((digest[i] & 0xff) + 0x100, 16).substring(1));
-				}
-
-				checksumMap.put(algorithm.getAlgorithm(), sb.toString());
+				result.getChecksums().put(algorithmName, checksum);
 			}
-
-			result.put(scannedPath, checksumMap);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -44,4 +34,13 @@ public class HashComputer {
 
 		return result;
 	}
+
+	private String generateChecksum(MessageDigest algorithm, byte[] data) {
+		byte[] digest;
+
+		algorithm.update(data);
+		digest = algorithm.digest();
+		return BytesTranslator.toHex(digest);
+	}
+
 }
